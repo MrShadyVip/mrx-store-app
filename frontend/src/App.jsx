@@ -9,32 +9,45 @@ function App() {
   const [activeTab, setActiveTab] = useState('home');
 
   useEffect(() => {
-    // تهيئة Telegram Web App
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-      const initData = tg.initDataUnsafe?.user;
-      setUser(initData);
-      
-      // إذا كان المستخدم مسجل دخوله، نضيفه لقاعدة البيانات
-      if (initData) {
-        axios.post(`${import.meta.env.VITE_API_URL}/users`, {
-          id: initData.id,
-          username: initData.username,
-          first_name: initData.first_name
-        }).catch(err => console.log('المستخدم موجود مسبقاً'));
+    // محاولة الاتصال بـ Telegram إذا كان متاحاً
+    try {
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+        const initData = tg.initDataUnsafe?.user;
+        setUser(initData);
         
-        // جلب الرصيد
-        axios.get(`${import.meta.env.VITE_API_URL}/users/${initData.id}/balance`)
-          .then(res => setBalance(res.data.balance))
-          .catch(err => console.log('لم يتم العثور على رصيد'));
+        // إذا كان المستخدم موجوداً
+        if (initData) {
+          // محاولة إضافة المستخدم
+          axios.post(`${import.meta.env.VITE_API_URL}/users`, {
+            id: initData.id,
+            username: initData.username,
+            first_name: initData.first_name
+          }).catch(err => console.log('مستخدم تجريبي'));
+          
+          // جلب الرصيد
+          axios.get(`${import.meta.env.VITE_API_URL}/users/${initData.id}/balance`)
+            .then(res => setBalance(res.data.balance))
+            .catch(err => console.log('لا يوجد رصيد'));
+        }
+      } else {
+        // وضع تجريبي - نحن في متصفح عادي
+        console.log('وضع التجريب: خارج تليجرام');
+        setUser({ id: 123456789, first_name: 'مستخدم تجريبي' });
       }
+    } catch (e) {
+      console.log('خطأ في تهيئة تليجرام:', e);
+      setUser({ id: 123456789, first_name: 'مستخدم تجريبي' });
     }
 
     // جلب الأقسام من Backend
     axios.get(`${import.meta.env.VITE_API_URL}/categories`)
-      .then(res => setCategories(res.data))
+      .then(res => {
+        console.log('الأقسام:', res.data);
+        setCategories(res.data);
+      })
       .catch(err => console.error('خطأ في جلب الأقسام:', err));
   }, []);
 
@@ -44,28 +57,32 @@ function App() {
       case 'home':
         return (
           <div>
-            <h2>الأقسام</h2>
-            <div style={styles.grid}>
-              {categories.map(cat => (
-                <div key={cat.id} style={styles.categoryCard}>
-                  {cat.name}
-                </div>
-              ))}
-            </div>
+            <h2 style={{marginBottom: '15px'}}>الأقسام</h2>
+            {categories.length === 0 ? (
+              <p>جاري تحميل الأقسام...</p>
+            ) : (
+              <div style={styles.grid}>
+                {categories.map(cat => (
+                  <div key={cat.id} style={styles.categoryCard}>
+                    {cat.name}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       case 'orders':
         return (
           <div>
             <h2>طلباتي</h2>
-            <p>لا توجد طلبات بعد</p>
+            <p style={styles.emptyState}>لا توجد طلبات بعد</p>
           </div>
         );
       case 'recharge':
         return (
           <div>
             <h2>شحن الرصيد</h2>
-            <p>اختر طريقة الشحن</p>
+            <p>اختر طريقة الشحن:</p>
             <div style={styles.paymentOptions}>
               <button style={styles.paymentButton}>USDT (BEP20)</button>
               <button style={styles.paymentButton}>USDT (TRC20)</button>
@@ -78,7 +95,7 @@ function App() {
         return (
           <div>
             <h2>سجل الإيداعات</h2>
-            <p>لا توجد إيداعات بعد</p>
+            <p style={styles.emptyState}>لا توجد إيداعات بعد</p>
           </div>
         );
       case 'contact':
@@ -193,7 +210,11 @@ const styles = {
     borderRadius: '10px',
     textAlign: 'center',
     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    transition: 'transform 0.2s',
+    ':hover': {
+      transform: 'scale(1.05)'
+    }
   },
   bottomNav: {
     position: 'fixed',
@@ -234,7 +255,16 @@ const styles = {
     background: 'white',
     fontSize: '16px',
     cursor: 'pointer',
-    boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+    transition: 'background 0.3s',
+    ':hover': {
+      background: '#f0f0f0'
+    }
+  },
+  emptyState: {
+    textAlign: 'center',
+    color: '#999',
+    marginTop: '50px'
   }
 };
 
