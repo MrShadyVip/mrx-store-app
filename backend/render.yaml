@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: mrx-store-backend
+    runtime: python
+    region: frankfurt  # أو singapore حسب الأقرب لك
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: NOWPAYMENTS_API_KEY
+        sync: false
+      - key: BINANCE_API_KEY
+        sync: false
+      - key: BINANCE_SECRET_KEY
+        sync: false
+      - key: BASE_URL
+        value: https://mrx-store-backend.onrender.com
